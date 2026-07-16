@@ -1,6 +1,11 @@
 """
 operations.py
-Implements supported task operations.
+
+Implements the supported task operations:
+- uppercase
+- lowercase
+- reverse
+- wordcount
 """
 
 
@@ -23,5 +28,6 @@ def run_operation(operation_type: str, input_text: str) -> str:
         word_count = len(input_text.split())
         return str(word_count)
 
-    msg = f"Unsupported operation type: {operation_type}"
-    raise UnsupportedOperationError(msg)
+    raise UnsupportedOperationError(
+        f"Unsupported operation type: {operation_type}"
+    )
