@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22' # Bumped to 22 to fix the deprecation warning
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
       - name: Install backend dependencies
@@ -32,7 +32,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22' # Bumped to 22 to fix the deprecation warning
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
       - name: Install frontend dependencies
@@ -52,7 +52,7 @@ jobs:
       - name: Install flake8
         run: pip install flake8
       - name: Run flake8
-        # Run from project root so Flake8 reads your global .flake8 config and ignores node_modules
+        # Run from project root so Flake8 reads your global .flake8 config
         run: flake8 worker/
 
   build-and-push:
@@ -66,12 +66,15 @@ jobs:
       - name: Set short SHA as image tag
         id: vars
         run: echo "image_tag=$(echo ${GITHUB_SHA} | cut -c1-7)" >> "$GITHUB_OUTPUT"
+      
       - uses: docker/setup-buildx-action@v3
+      
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}  # <-- Updated to match your GitHub Secret name
+          password: ${{ secrets.DOCKER_PASSWORD }} # Ensure this matches your GitHub Secret exactly!
+      
       - name: Build and push backend image
         uses: docker/build-push-action@v6
         with:
@@ -82,6 +85,7 @@ jobs:
             ${{ env.DOCKERHUB_USERNAME }}/ai-task-backend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      
       - name: Build and push worker image
         uses: docker/build-push-action@v6
         with:
@@ -92,6 +96,7 @@ jobs:
             ${{ env.DOCKERHUB_USERNAME }}/ai-task-worker:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      
       - name: Build and push frontend image
         uses: docker/build-push-action@v6
         with:
@@ -103,6 +108,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  # IF YOU DO NOT HAVE A SEPARATE INFRA REPO, DELETE THIS ENTIRE BLOCK BELOW
   update-infra-repo:
     needs: build-and-push
     runs-on: ubuntu-latest
@@ -110,9 +116,10 @@ jobs:
       - name: Checkout infra repository
         uses: actions/checkout@v4
         with:
-          repository: ${{ secrets.INFRA_REPO }}
+          repository: ${{ secrets.INFRA_REPO }} # Must be formatted like: yourusername/your-repo-name
           token: ${{ secrets.INFRA_REPO_PAT }}
           path: infra
+      
       - name: Update image tags in manifests
         working-directory: ./infra
         env:
@@ -122,6 +129,7 @@ jobs:
           sed -i "s|image: .*ai-task-backend:.*|image: ${NAMESPACE}/ai-task-backend:${IMAGE_TAG}|g" k8s/backend-deployment.yaml
           sed -i "s|image: .*ai-task-worker:.*|image: ${NAMESPACE}/ai-task-worker:${IMAGE_TAG}|g" k8s/worker-deployment.yaml
           sed -i "s|image: .*ai-task-frontend:.*|image: ${NAMESPACE}/ai-task-frontend:${IMAGE_TAG}|g" k8s/frontend-deployment.yaml
+      
       - name: Commit and push updated manifests
         working-directory: ./infra
         run: |
