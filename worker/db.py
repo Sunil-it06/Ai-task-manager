@@ -18,7 +18,12 @@ _db = None
 def get_db():
     global _client, _db
     if _db is None:
-        mongo_uri = os.environ.get("MONGO_URI", "mongodb://localhost:27017/ai_task_platform")
+        default_uri = (
+            "mongodb+srv://sunilguptait06:Sunil%40mern1@cluster0.stuqq5m"
+            ".mongodb.net/ai-task-manager?retryWrites=true&w=majority"
+            "&appName=Cluster0"
+        )
+        mongo_uri = os.environ.get("MONGO_URI", default_uri)
         _client = MongoClient(mongo_uri)
         # Database name is taken from the URI itself
         _db = _client.get_default_database()
