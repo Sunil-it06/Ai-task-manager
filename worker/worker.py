@@ -36,15 +36,17 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 QUEUE_KEY = "ai-tasks-queue"
-BLOCK_TIMEOUT_SECONDS = 5  # so the loop can check for shutdown signals periodically
+BLOCK_TIMEOUT_SECONDS = 5  # So the loop can check for shutdown signals periodically
 
 
-def get_redis_client():
+def get_redis_client() -> redis.Redis:
+    """Initializes the Redis client using the configured URL environment variable."""
     redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
     return redis.from_url(redis_url, decode_responses=True)
 
 
 def process_task(task_id: str):
+    """Fetches task metadata, runs the processing operation, and updates the database status."""
     task = get_task(task_id)
     if not task:
         logger.error("Task %s not found in database, skipping", task_id)
@@ -91,13 +93,23 @@ def process_task(task_id: str):
 def main():
     logger.info("Worker starting up, connecting to Redis...")
     client = get_redis_client()
-    logger.info("Worker connected. Listening on queue '%s'", QUEUE_KEY)
+
+    # Explicit retry loop for initial startup connection handling (essential for Docker orchestrations)
+    while True:
+        try:
+            client.ping()
+            break
+        except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as exc:
+            logger.error("Initial Redis connection failed (%s). Retrying in 5s...", exc)
+            time.sleep(5)
+
+    logger.info("Worker connected successfully. Listening on queue '%s'", QUEUE_KEY)
 
     while True:
         try:
             item = client.brpop(QUEUE_KEY, timeout=BLOCK_TIMEOUT_SECONDS)
             if item is None:
-                # No job within timeout window - loop again (keeps process responsive)
+                # No job within timeout window - loop again (keeps process responsive to signals)
                 continue
 
             _, payload_raw = item
@@ -111,10 +123,13 @@ def main():
             process_task(task_id)
 
         except redis.exceptions.ConnectionError as exc:
-            logger.error("Redis connection error: %s. Retrying in 3s...", exc)
+            logger.error("Redis connection lost: %s. Reconnecting in 3s...", exc)
             time.sleep(3)
 
-        except Exception:  # noqa: BLE001 - keep the worker alive on unexpected errors
+        except json.JSONDecodeError as exc:
+            logger.error("Malformed JSON payload received, skipping item: %s", exc)
+
+        except Exception:  # noqa: BLE001 - keep the worker container alive on runtime errors
             logger.exception("Unexpected error in main loop, continuing...")
             time.sleep(1)
 
