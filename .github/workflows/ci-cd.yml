@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 env:
-  DOCKERHUB_NAMESPACE: ${{ secrets.DOCKERHUB_USERNAME }}
+  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
 
 jobs:
   lint-backend:
@@ -52,8 +52,8 @@ jobs:
       - name: Install flake8
         run: pip install flake8
       - name: Run flake8
-        working-directory: ./worker
-        run: flake8 .
+        # Run from project root so Flake8 reads your global .flake8 config and ignores node_modules
+        run: flake8 worker/
 
   build-and-push:
     needs: [lint-backend, lint-frontend, lint-worker]
@@ -71,15 +71,15 @@ jobs:
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          password: ${{ secrets.DOCKER_PASSWORD }}  # <-- Updated to match your GitHub Secret name
       - name: Build and push backend image
         uses: docker/build-push-action@v6
         with:
           context: ./backend
           push: true
           tags: |
-            ${{ env.DOCKERHUB_NAMESPACE }}/ai-task-backend:${{ steps.vars.outputs.image_tag }}
-            ${{ env.DOCKERHUB_NAMESPACE }}/ai-task-backend:latest
+            ${{ env.DOCKERHUB_USERNAME }}/ai-task-backend:${{ steps.vars.outputs.image_tag }}
+            ${{ env.DOCKERHUB_USERNAME }}/ai-task-backend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Build and push worker image
@@ -88,8 +88,8 @@ jobs:
           context: ./worker
           push: true
           tags: |
-            ${{ env.DOCKERHUB_NAMESPACE }}/ai-task-worker:${{ steps.vars.outputs.image_tag }}
-            ${{ env.DOCKERHUB_NAMESPACE }}/ai-task-worker:latest
+            ${{ env.DOCKERHUB_USERNAME }}/ai-task-worker:${{ steps.vars.outputs.image_tag }}
+            ${{ env.DOCKERHUB_USERNAME }}/ai-task-worker:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Build and push frontend image
@@ -98,8 +98,8 @@ jobs:
           context: ./frontend
           push: true
           tags: |
-            ${{ env.DOCKERHUB_NAMESPACE }}/ai-task-frontend:${{ steps.vars.outputs.image_tag }}
-            ${{ env.DOCKERHUB_NAMESPACE }}/ai-task-frontend:latest
+            ${{ env.DOCKERHUB_USERNAME }}/ai-task-frontend:${{ steps.vars.outputs.image_tag }}
+            ${{ env.DOCKERHUB_USERNAME }}/ai-task-frontend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
