@@ -1,0 +1,82 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: ai-task-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: ai-task-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ai-task-backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      PORT: 5000
+      MONGO_URI: mongodb+srv://sunilguptait06:Sunil%40mern1@cluster0.stuqq5m.mongodb.net/ai-task-manager?retryWrites=true&w=majority&appName=Cluster0
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-dev_change_this_secret}
+      JWT_EXPIRES_IN: 7d
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    container_name: ai-task-worker
+    restart: unless-stopped
+    environment:
+      MONGO_URI: mongodb+srv://sunilguptait06:Sunil%40mern1@cluster0.stuqq5m.mongodb.net/ai-task-manager?retryWrites=true&w=majority&appName=Cluster0
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # Scale locally with: docker compose up --scale worker=3
+    deploy:
+      replicas: 1
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ai-task-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:8080"
+    depends_on:
+      - backend
+
+volumes:
+  mongo_data:
+  redis_data:
