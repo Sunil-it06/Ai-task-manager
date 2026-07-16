@@ -5,17 +5,11 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 
 export default [
   { ignores: ['dist'] },
-export default [
-  { ignores: ['dist'] },
   {
     files: ['**/*.{js,jsx}'],
     languageOptions: {
       ecmaVersion: 2022,
-      ecmaVersion: 2022,
       globals: globals.browser,
-      parserOptions: {
-        ecmaFeatures: { jsx: true },
-      },
       parserOptions: {
         ecmaFeatures: { jsx: true },
       },
