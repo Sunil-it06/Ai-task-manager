@@ -5,10 +5,10 @@ import StatusPill from '../components/StatusPill';
 import { listTasks, createTask, runTask } from '../api/tasks';
 
 const OPERATIONS = [
-  { value: 'uppercase', label: 'Uppercase' },
-  { value: 'lowercase', label: 'Lowercase' },
-  { value: 'reverse', label: 'Reverse string' },
-  { value: 'wordcount', label: 'Word count' },
+  { value: 'uppercase', label: 'Uppercase', icon: '↑' },
+  { value: 'lowercase', label: 'Lowercase', icon: '↓' },
+  { value: 'reverse', label: 'Reverse', icon: '↔' },
+  { value: 'wordcount', label: 'Word Count', icon: '#️⃣' },
 ];
 
 function Dashboard() {
@@ -24,8 +24,8 @@ function Dashboard() {
     try {
       const data = await listTasks();
       setTasks(data);
-    } catch {
-      // silent - polling will retry
+    } catch (err) {
+      console.error(err);
     } finally {
       setLoadingTasks(false);
     }
@@ -33,8 +33,7 @@ function Dashboard() {
 
   useEffect(() => {
     fetchTasks();
-    // Poll every 2s so Pending/Running tasks update to Success/Failed without manual refresh
-    const interval = setInterval(fetchTasks, 2000);
+    const interval = setInterval(fetchTasks, 1800);
     return () => clearInterval(interval);
   }, [fetchTasks]);
 
@@ -42,119 +41,146 @@ function Dashboard() {
     e.preventDefault();
     setError('');
     if (!title.trim() || !inputText.trim()) {
-      setError('Title and input text are required.');
+      setError('Please fill both title and input text.');
       return;
     }
+
     setCreating(true);
     try {
       const task = await createTask({ title, inputText, operationType });
-      setTasks((prev) => [task, ...prev]);
       await runTask(task._id);
       setTitle('');
       setInputText('');
-      fetchTasks();
+      fetchTasks(); // Refresh immediately
     } catch (err) {
-      setError(err.response?.data?.message || 'Could not create task.');
+      setError(err.response?.data?.message || 'Failed to create task');
     } finally {
       setCreating(false);
     }
   }
 
   return (
-    <div className="min-h-screen " >
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
       <Navbar />
 
-      <main className="mx-auto max-w-5xl px-6 py-10">
-        <div className="mb-8">
-          <h1 className="text-xl font-semibold text-ink">New task</h1>
-          <p className="mt-1 text-sm text-faint">
-            Submit text for asynchronous processing. It runs through the queue and worker automatically.
-          </p>
+      <main className="mx-auto max-w-6xl px-6 py-12">
+        {/* Header */}
+        <div className="mb-10 flex items-end justify-between">
+          <div>
+            <h1 className="text-4xl font-bold tracking-tight text-white">TaskFlow</h1>
+            <p className="mt-2 text-lg text-slate-400">
+              Process text asynchronously with intelligent workers
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-slate-500">Live Queue</p>
+            <p className="text-2xl font-mono font-semibold text-emerald-400">{tasks.length}</p>
+          </div>
         </div>
 
-        <form
-          onSubmit={handleCreate}
-          className="mb-12 grid grid-cols-1 gap-4 rounded-xl border border-border bg-surface p-6 md:grid-cols-2"
-        >
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-faint">Task title</label>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Normalize customer name"
-              className="w-full rounded-lg border border-border bg-raised px-3 py-2 text-sm text-ink outline-none transition focus:border-accent"
-            />
-          </div>
+        {/* Create Task Card - Modern Glassmorphism */}
+        <div className="mb-12 rounded-3xl border border-slate-700/50 bg-slate-900/70 backdrop-blur-xl p-8 shadow-2xl">
+          <h2 className="mb-6 text-2xl font-semibold text-white">Create New Task</h2>
 
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-faint">Operation</label>
-            <select
-              value={operationType}
-              onChange={(e) => setOperationType(e.target.value)}
-              className="w-full rounded-lg border border-border bg-raised px-3 py-2 text-sm text-ink outline-none transition focus:border-accent"
-            >
-              {OPERATIONS.map((op) => (
-                <option key={op.value} value={op.value}>
-                  {op.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          <form onSubmit={handleCreate} className="space-y-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-2">Task Title</label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Process customer feedback"
+                  className="w-full rounded-2xl bg-slate-800 border border-slate-700 px-5 py-3 text-white placeholder-slate-500 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition"
+                />
+              </div>
 
-          <div className="md:col-span-2">
-            <label className="mb-1.5 block text-xs font-medium text-faint">Input text</label>
-            <textarea
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              rows={3}
-              placeholder="Paste the text you want processed..."
-              className="w-full rounded-lg border border-border bg-raised px-3 py-2 text-sm text-ink outline-none transition focus:border-accent"
-            />
-          </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-2">Operation Type</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {OPERATIONS.map((op) => (
+                    <button
+                      key={op.value}
+                      type="button"
+                      onClick={() => setOperationType(op.value)}
+                      className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-all ${
+                        operationType === op.value
+                          ? 'border-emerald-500 bg-emerald-500/10 text-white'
+                          : 'border-slate-700 hover:border-slate-600 text-slate-300'
+                      }`}
+                    >
+                      <span className="text-xl">{op.icon}</span>
+                      <span className="font-medium">{op.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
 
-          {error && (
-            <p className="md:col-span-2 rounded-md border border-failed/30 bg-failed/10 px-3 py-2 text-xs text-failed">
-              {error}
-            </p>
-          )}
+            <div>
+              <label className="block text-sm font-medium text-slate-400 mb-2">Input Text</label>
+              <textarea
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                rows={5}
+                placeholder="Paste or type the text you want to process..."
+                className="w-full resize-y min-h-[140px] rounded-3xl bg-slate-800 border border-slate-700 px-5 py-4 text-white placeholder-slate-500 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition"
+              />
+            </div>
 
-          <div className="md:col-span-2">
+            {error && (
+              <div className="rounded-2xl bg-red-500/10 border border-red-500/30 p-4 text-red-400 text-sm">
+                {error}
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={creating}
-              className="rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-base transition hover:bg-accent-dim disabled:opacity-50"
+              disabled={creating || !title.trim() || !inputText.trim()}
+              className="w-full md:w-auto px-10 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:opacity-50 text-white font-semibold rounded-2xl text-lg transition-all active:scale-[0.98] shadow-lg shadow-emerald-500/30"
             >
-              {creating ? 'Queuing...' : 'Run task'}
+              {creating ? 'Queuing Task...' : '🚀 Submit to Queue'}
             </button>
-          </div>
-        </form>
+          </form>
+        </div>
 
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-ink">Your tasks</h2>
-          <span className="font-mono text-xs text-faint">{tasks.length} total</span>
+        {/* Tasks List */}
+        <div className="mb-6 flex items-center justify-between">
+          <h2 className="text-2xl font-semibold text-white">Recent Tasks</h2>
+          <span className="text-slate-400 text-sm font-mono">{tasks.length} tasks</span>
         </div>
 
         {loadingTasks ? (
-          <p className="font-mono text-sm text-faint">loading...</p>
+          <div className="text-center py-20 text-slate-400">Loading tasks...</div>
         ) : tasks.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border py-16 text-center">
-            <p className="text-sm text-faint">No tasks yet. Create one above to get started.</p>
+          <div className="rounded-3xl border border-dashed border-slate-700 py-20 text-center">
+            <p className="text-slate-400">No tasks yet. Create your first one above!</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {tasks.map((task) => (
               <Link
                 key={task._id}
                 to={`/tasks/${task._id}`}
-                className="flex items-center justify-between rounded-xl border border-border bg-surface px-5 py-4 transition hover:border-accent/40"
+                className="group block rounded-3xl border border-slate-700 bg-slate-900/60 hover:bg-slate-900 hover:border-emerald-500/30 transition-all duration-300 p-6"
               >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-ink">{task.title}</p>
-                  <p className="mt-1 font-mono text-xs text-faint">
-                    {task.operationType} · {new Date(task.createdAt).toLocaleString()}
-                  </p>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-lg font-medium text-white truncate group-hover:text-emerald-400 transition-colors">
+                      {task.title}
+                    </p>
+                    <p className="mt-2 font-mono text-sm text-slate-500">
+                      {task.operationType} • {new Date(task.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                  <StatusPill status={task.status} />
                 </div>
-                <StatusPill status={task.status} />
+
+                {task.result && (
+                  <div className="mt-4 text-sm text-emerald-400 font-mono line-clamp-2">
+                    Result: {task.result}
+                  </div>
+                )}
               </Link>
             ))}
           </div>

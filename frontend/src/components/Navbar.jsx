@@ -11,31 +11,45 @@ function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-10 border-b border-slate-800 bg-slate-950/90 backdrop-blur-md">
-      <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-400/10 ring-1 ring-emerald-400/30">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path d="M13 2 4 14h6l-1 8 9-12h-6z" fill="#34D399" />
-            </svg>
-          </div>
-          <span className="text-sm font-semibold tracking-tight text-slate-100">TaskFlow</span>
-        </div>
-
-        {user && (
-          <div className="flex items-center gap-3">
-            <div className="hidden items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-3 py-1.5 sm:flex">
-              <div className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              <span className="font-mono text-xs text-slate-400">{user.email}</span>
+    <header className="sticky top-0 z-50 border-b border-slate-800/80 bg-slate-950/95 backdrop-blur-xl">
+      <div className="mx-auto max-w-6xl px-6 py-5">
+        <div className="flex items-center justify-between">
+          {/* Logo */}
+          <div 
+            onClick={() => navigate('/')}
+            className="flex items-center gap-3 cursor-pointer group"
+          >
+            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 shadow-lg shadow-emerald-500/30 transition-transform group-hover:scale-110">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M13 2L4 14H10L9 22L18 10H12L13 2Z" fill="#ffffff" />
+              </svg>
             </div>
-            <button
-              onClick={handleLogout}
-              className="rounded-lg border border-slate-800 px-3.5 py-2 text-xs font-medium text-slate-400 transition hover:border-red-400/40 hover:bg-red-400/5 hover:text-red-400"
-            >
-              Sign out
-            </button>
+            <div>
+              <span className="text-2xl font-bold tracking-tighter text-white">TaskFlow</span>
+              <p className="text-[10px] text-emerald-400 -mt-1 font-mono">ASYNC ENGINE</p>
+            </div>
           </div>
-        )}
+
+          {/* User Info & Logout */}
+          {user && (
+            <div className="flex items-center gap-4">
+              <div className="hidden sm:flex items-center gap-3 bg-slate-900 border border-slate-700 rounded-2xl px-4 py-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="font-mono text-sm text-slate-400">{user.email}</span>
+              </div>
+
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-2xl border border-slate-700 hover:border-red-500/50 hover:bg-red-500/5 text-slate-400 hover:text-red-400 transition-all duration-200 text-sm font-medium"
+              >
+                <span>Sign Out</span>
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4V7" />
+                </svg>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );
